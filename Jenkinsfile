@@ -20,7 +20,7 @@ pipeline {
             steps {
                 script {
                     echo "🔐 Logging in and pushing to DockerHub"
-                    docker.withRegistry('https://index.docker.io/v1/', 'Docker_hub') {
+                    docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-credentials') {
                         docker.image("${IMAGE_NAME}").push('latest')
                     }
                 }
