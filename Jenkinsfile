@@ -2,8 +2,11 @@ pipeline {
     agent any
 
     environment {
-        // Replace with your actual DockerHub repo: username/repo
-        IMAGE_NAME = "khaira23/flask-jenkins"
+        // Your DockerHub image name
+        IMAGE_NAME = "khaira11/flask-jenkins"
+        CONTAINER_NAME = "flask-jenkins-app"
+        HOST_PORT = "5000"
+        CONTAINER_PORT = "5000"
     }
 
     stages {
@@ -20,9 +23,36 @@ pipeline {
             steps {
                 script {
                     echo "🔐 Logging in and pushing to DockerHub"
-                    docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-credentials') {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
                         docker.image("${IMAGE_NAME}").push('latest')
                     }
+                }
+            }
+        }
+
+        stage('Deploy Container') {
+            steps {
+                script {
+                    echo "🚀 Deploying container from DockerHub"
+
+                    // Stop and remove any running container with the same name
+                    sh """
+                        if [ \$(docker ps -aq -f name=\$CONTAINER_NAME) ]; then
+                            echo "⚠️ Removing existing container: \$CONTAINER_NAME"
+                            docker stop \$CONTAINER_NAME || true
+                            docker rm \$CONTAINER_NAME || true
+                        fi
+                    """
+
+                    // Pull the latest image
+                    sh "docker pull ${IMAGE_NAME}:latest"
+
+                    // Run the container on port 5000
+                    sh """
+                        docker run -d --name \$CONTAINER_NAME -p \$HOST_PORT:\$CONTAINER_PORT ${IMAGE_NAME}:latest
+                    """
+
+                    echo "✅ Container deployed and accessible at http://localhost:${HOST_PORT}"
                 }
             }
         }
@@ -30,10 +60,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Build and push successful!"
+            echo "🎉 Pipeline completed successfully: Build, Push, Deploy"
         }
         failure {
-            echo "❌ Build or push failed. Check the logs."
+            echo "❌ Something failed. Check the build logs."
         }
     }
 }
